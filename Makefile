@@ -1,6 +1,6 @@
 build:
 	@echo "building & running guild board"
-	@go build -v -o backend_service app.go  && ./backend_service 
+	@go build -v -o backend_service main.go  && ./backend_service 
 
 run:
 	@echo "running guild board"
