@@ -8,4 +8,4 @@ run:
 
 gen-kitex:
 	@echo "generate kitex"
-	@kitex -module github.com/arfaghifari/ki-call proto/merchantvoucher.proto
+	@kitex -module github.com/arfaghifari/ki-call proto/merchantvouchers.proto

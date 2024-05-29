@@ -23,7 +23,7 @@ func Main() {
 	router.HandleFunc("/ki-call", kicallHandlers.KiCall).Methods(http.MethodPost)
 
 	serverConfig := server.Config{
-		WriteTimeout: 5 * time.Second,
+		WriteTimeout: 30 * time.Second,
 		ReadTimeout:  5 * time.Second,
 		Port:         9700,
 	}

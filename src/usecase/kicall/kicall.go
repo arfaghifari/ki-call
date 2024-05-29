@@ -6,8 +6,9 @@ import (
 
 	"errors"
 
-	kitexClient "github.com/arfaghifari/ki-call/kitex_gen/merchantvoucher/merchantvoucher"
+	kitexClient "github.com/arfaghifari/ki-call/kitex_gen/merchantvouchers/merchantvouchers"
 	"github.com/arfaghifari/ki-call/src/converter"
+	"github.com/cloudwego/kitex/client"
 )
 
 type Usecase interface {
@@ -46,7 +47,8 @@ func (u *usecase) GetRequestMethod(method string, noEmpty bool) (map[string]inte
 }
 
 func (u *usecase) KiCall(host string, method string, req map[string]interface{}) (map[string]interface{}, error) {
-	cli2, _ := kitexClient.NewClient("test")
+	var errKitex error
+	cli2, _ := kitexClient.NewClient("test", client.WithHostPorts(host))
 	mthd2 := reflect.ValueOf(cli2).MethodByName(method)
 
 	cli := reflect.TypeOf((*kitexClient.Client)(nil)).Elem()
@@ -69,9 +71,13 @@ func (u *usecase) KiCall(host string, method string, req map[string]interface{})
 	})
 
 	if !outFunc[1].IsNil() {
-		return nil, nil
+		errKitex = errors.New(outFunc[1].MethodByName("Error").Call([]reflect.Value{})[0].String())
+		if !outFunc[0].IsNil() {
+			resp, _ := converter.TransformStructToMapJson(outFunc[0].Elem(), false)
+			return resp, errKitex
+		}
+		return nil, errKitex
 	}
-
 	return converter.TransformStructToMapJson(outFunc[0].Elem(), false)
 
 }

@@ -55,10 +55,9 @@ func (h *Handlers) GetListMethod(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Fatal("Failed build response")
 		}
-		if statusCode == http.StatusOK {
-			w.Write(responseWriter)
-		} else {
-			http.Error(w, string(responseWriter), statusCode)
+		w.Write(responseWriter)
+		if statusCode != http.StatusOK {
+			w.WriteHeader(statusCode)
 		}
 	}()
 
@@ -88,10 +87,9 @@ func (h *Handlers) GetRequestMethod(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Fatal("Failed build response")
 		}
-		if statusCode == http.StatusOK {
-			w.Write(responseWriter)
-		} else {
-			http.Error(w, string(responseWriter), statusCode)
+		w.Write(responseWriter)
+		if statusCode != http.StatusOK {
+			w.WriteHeader(statusCode)
 		}
 	}()
 
@@ -125,10 +123,9 @@ func (h *Handlers) KiCall(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Fatal("Failed build response")
 		}
-		if statusCode == http.StatusOK {
-			w.Write(responseWriter)
-		} else {
-			http.Error(w, string(responseWriter), statusCode)
+		w.Write(responseWriter)
+		if statusCode != http.StatusOK {
+			w.WriteHeader(statusCode)
 		}
 	}()
 
