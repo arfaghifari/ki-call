@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 
 	usecase "github.com/arfaghifari/ki-call/src/usecase/kicall"
 )
@@ -95,8 +96,10 @@ func (h *Handlers) GetRequestMethod(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	methodName := r.URL.Query().Get("method")
+	noEmptyStr := r.URL.Query().Get("no_empty")
+	noEmpty, _ := strconv.ParseBool(noEmptyStr)
 
-	res, err := h.usecase.GetRequestMethod(methodName)
+	res, err := h.usecase.GetRequestMethod(methodName, noEmpty)
 
 	if err != nil {
 		statusCode = http.StatusInternalServerError
