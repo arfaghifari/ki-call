@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	myClient "github.com/arfaghifari/ki-call/src/client"
 	kcHandlers "github.com/arfaghifari/ki-call/src/handlers/http/kicall"
 	server "github.com/arfaghifari/ki-call/src/server"
 	kcUsecase "github.com/arfaghifari/ki-call/src/usecase/kicall"
@@ -17,10 +18,13 @@ func Main() {
 	kicallHandlers := kcHandlers.New(kcUsecase.NewUsecase())
 	// routes http
 	router.HandleFunc("/hello", kcHandlers.GetHello).Methods(http.MethodGet)
-	router.HandleFunc("/ls", kicallHandlers.GetListMethod).Methods(http.MethodGet)
+	router.HandleFunc("/ls-svc", kicallHandlers.GetListService).Methods(http.MethodGet)
+	router.HandleFunc("/ls-func", kicallHandlers.GetListMethod).Methods(http.MethodGet)
 	router.HandleFunc("/requests", kicallHandlers.GetRequestMethod).Methods(http.MethodGet)
 
 	router.HandleFunc("/ki-call", kicallHandlers.KiCall).Methods(http.MethodPost)
+
+	myClient.ClientKitex.RegisterAllClient("")
 
 	serverConfig := server.Config{
 		WriteTimeout: 30 * time.Second,

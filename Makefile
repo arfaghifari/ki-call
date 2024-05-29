@@ -7,5 +7,9 @@ run:
 	@./backend_service 
 
 gen-kitex:
-	@echo "generate kitex"
-	@kitex -module github.com/arfaghifari/ki-call proto/merchantvouchers.proto
+	@echo "generate kitex $(obj)"
+	@kitex -module github.com/arfaghifari/ki-call proto/$(obj).proto
+
+gen-client:
+	@echo "generate kitex client"
+	@python3 generate_pkg.py

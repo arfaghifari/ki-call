@@ -2,19 +2,20 @@ package kicall
 
 import (
 	"context"
+	"log"
 	"reflect"
 
 	"errors"
 
-	kitexClient "github.com/arfaghifari/ki-call/kitex_gen/merchantvouchers/merchantvouchers"
+	myClient "github.com/arfaghifari/ki-call/src/client"
 	"github.com/arfaghifari/ki-call/src/converter"
-	"github.com/cloudwego/kitex/client"
 )
 
 type Usecase interface {
-	GetListMethod() ([]string, error)
-	GetRequestMethod(method string, noEmpty bool) (map[string]interface{}, error)
-	KiCall(host string, method string, req map[string]interface{}) (map[string]interface{}, error)
+	GetListService() ([]string, error)
+	GetListMethod(svc string) ([]string, error)
+	GetRequestMethod(svc, method string, noEmpty bool) (map[string]interface{}, error)
+	KiCall(host, svc, method string, req map[string]interface{}) (map[string]interface{}, error)
 }
 
 func NewUsecase() Usecase {
@@ -23,8 +24,22 @@ func NewUsecase() Usecase {
 
 type usecase struct{}
 
-func (u *usecase) GetListMethod() ([]string, error) {
-	cli := reflect.TypeOf((*kitexClient.Client)(nil)).Elem()
+func (u *usecase) GetListService() ([]string, error) {
+	// cli := reflect.TypeOf((*kitexClient.Client)(nil)).Elem()
+	cli := reflect.TypeOf(myClient.ClientKitex)
+
+	var fields []string
+	for i := 0; i < cli.NumField(); i++ {
+		fields = append(fields, cli.Field(i).Name)
+	}
+
+	return fields, nil
+}
+
+func (u *usecase) GetListMethod(svc string) ([]string, error) {
+	// cli := reflect.TypeOf((*kitexClient.Client)(nil)).Elem()
+	cli := reflect.ValueOf(myClient.ClientKitex).FieldByName(svc).Type()
+
 	var methods []string
 	for i := 0; i < cli.NumMethod(); i++ {
 		methods = append(methods, cli.Method(i).Name)
@@ -33,25 +48,30 @@ func (u *usecase) GetListMethod() ([]string, error) {
 	return methods, nil
 }
 
-func (u *usecase) GetRequestMethod(method string, noEmpty bool) (map[string]interface{}, error) {
-	cli := reflect.TypeOf((*kitexClient.Client)(nil)).Elem()
+func (u *usecase) GetRequestMethod(svc, method string, noEmpty bool) (map[string]interface{}, error) {
+	// cli := reflect.TypeOf((*kitexClient.Client)(nil)).Elem()
+	cli := reflect.ValueOf(myClient.ClientKitex).FieldByName(svc).Type()
 	mthd, found := cli.MethodByName(method)
 	if !found {
 		return nil, errors.New("method not exist")
 	}
 
 	inp := mthd.Type.In(1)
+	log.Println(inp)
 	req := reflect.New(inp.Elem()).Elem()
 
 	return converter.TransformStructToMapJson(req, noEmpty)
 }
 
-func (u *usecase) KiCall(host string, method string, req map[string]interface{}) (map[string]interface{}, error) {
+func (u *usecase) KiCall(host, svc, method string, req map[string]interface{}) (map[string]interface{}, error) {
 	var errKitex error
-	cli2, _ := kitexClient.NewClient("test", client.WithHostPorts(host))
-	mthd2 := reflect.ValueOf(cli2).MethodByName(method)
+	myClient.ClientKitex.RegisterAllClient(host)
+	cli2 := reflect.ValueOf(myClient.ClientKitex).FieldByName(svc)
+	// cli2, _ := kitexClient.NewClient("test", client.WithHostPorts(host))
+	mthd2 := cli2.MethodByName(method)
 
-	cli := reflect.TypeOf((*kitexClient.Client)(nil)).Elem()
+	cli := cli2.Type()
+	// cli := reflect.TypeOf((*kitexClient.Client)(nil)).Elem()
 	mthd, found := cli.MethodByName(method)
 	if !found {
 		return nil, errors.New("method not exist")

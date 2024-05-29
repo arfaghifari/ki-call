@@ -16,8 +16,9 @@ type Header struct {
 }
 
 type KiCallRequest struct {
-	Host    string
-	Method  string
+	Host    string `json:"host"`
+	Method  string `json:"method"`
+	Service string `json:"service"`
 	Request map[string]interface{}
 }
 
@@ -43,6 +44,36 @@ func GetHello(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "HELLO Ki Ka Ku")
 }
 
+func (h *Handlers) GetListService(w http.ResponseWriter, r *http.Request) {
+	var (
+		statusCode = http.StatusBadRequest
+		resp       MessageResponse
+	)
+	defer func() {
+		w.Header().Set("Content-Type", "application/json")
+		resp.StatusCode = statusCode
+		responseWriter, err := json.Marshal(resp)
+		if err != nil {
+			log.Fatal("Failed build response")
+		}
+		w.Write(responseWriter)
+		if statusCode != http.StatusOK {
+			w.WriteHeader(statusCode)
+		}
+	}()
+	res, err := h.usecase.GetListService()
+
+	if err != nil {
+		statusCode = http.StatusInternalServerError
+		resp.Header.Error = err.Error()
+		return
+	}
+	statusCode = http.StatusOK
+	resp.Data = map[string]interface{}{
+		"list_service": res,
+	}
+}
+
 func (h *Handlers) GetListMethod(w http.ResponseWriter, r *http.Request) {
 	var (
 		statusCode = http.StatusBadRequest
@@ -61,7 +92,8 @@ func (h *Handlers) GetListMethod(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	res, err := h.usecase.GetListMethod()
+	serviceName := r.URL.Query().Get("service")
+	res, err := h.usecase.GetListMethod(serviceName)
 
 	if err != nil {
 		statusCode = http.StatusInternalServerError
@@ -93,11 +125,12 @@ func (h *Handlers) GetRequestMethod(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
+	serviceName := r.URL.Query().Get("service")
 	methodName := r.URL.Query().Get("method")
 	noEmptyStr := r.URL.Query().Get("no_empty")
 	noEmpty, _ := strconv.ParseBool(noEmptyStr)
 
-	res, err := h.usecase.GetRequestMethod(methodName, noEmpty)
+	res, err := h.usecase.GetRequestMethod(serviceName, methodName, noEmpty)
 
 	if err != nil {
 		statusCode = http.StatusInternalServerError
@@ -106,6 +139,7 @@ func (h *Handlers) GetRequestMethod(w http.ResponseWriter, r *http.Request) {
 	}
 	statusCode = http.StatusOK
 	resp.Data = map[string]interface{}{
+		"service": serviceName,
 		"method":  methodName,
 		"request": res,
 	}
@@ -131,7 +165,7 @@ func (h *Handlers) KiCall(w http.ResponseWriter, r *http.Request) {
 
 	req := KiCallRequest{}
 	json.NewDecoder(r.Body).Decode(&req)
-	res, err := h.usecase.KiCall(req.Host, req.Method, req.Request)
+	res, err := h.usecase.KiCall(req.Host, req.Service, req.Method, req.Request)
 
 	if err != nil {
 		statusCode = http.StatusInternalServerError
