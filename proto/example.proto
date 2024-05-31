@@ -1,0 +1,15 @@
+syntax = "proto3";
+package example;
+option go_package = "example";
+
+service Example{
+    rpc ExampleFunc(ExampleRequest) returns (ExampleResponse) {}
+}
+
+message ExampleRequest{
+    string Source = 1;
+}
+
+message ExampleResponse{
+    string Status = 1;
+}
