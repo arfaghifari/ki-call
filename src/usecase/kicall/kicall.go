@@ -2,12 +2,14 @@ package kicall
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"reflect"
 
 	"errors"
 
 	myClient "github.com/arfaghifari/ki-call/src/client"
+	"github.com/arfaghifari/ki-call/src/constant"
 	"github.com/arfaghifari/ki-call/src/converter"
 )
 
@@ -38,11 +40,14 @@ func (u *usecase) GetListService() ([]string, error) {
 
 func (u *usecase) GetListMethod(svc string) ([]string, error) {
 	// cli := reflect.TypeOf((*kitexClient.Client)(nil)).Elem()
-	cli := reflect.ValueOf(myClient.ClientKitex).FieldByName(svc).Type()
-
+	cli := reflect.ValueOf(myClient.ClientKitex).FieldByName(svc)
+	if !cli.IsValid() {
+		return []string{}, fmt.Errorf(constant.ErrServiceNotFound, svc)
+	}
+	cliType := cli.Type()
 	var methods []string
-	for i := 0; i < cli.NumMethod(); i++ {
-		methods = append(methods, cli.Method(i).Name)
+	for i := 0; i < cliType.NumMethod(); i++ {
+		methods = append(methods, cliType.Method(i).Name)
 	}
 
 	return methods, nil
@@ -50,10 +55,14 @@ func (u *usecase) GetListMethod(svc string) ([]string, error) {
 
 func (u *usecase) GetRequestMethod(svc, method string, noEmpty bool) (map[string]interface{}, error) {
 	// cli := reflect.TypeOf((*kitexClient.Client)(nil)).Elem()
-	cli := reflect.ValueOf(myClient.ClientKitex).FieldByName(svc).Type()
-	mthd, found := cli.MethodByName(method)
+	cli := reflect.ValueOf(myClient.ClientKitex).FieldByName(svc)
+	if !cli.IsValid() {
+		return map[string]interface{}{}, fmt.Errorf(constant.ErrServiceNotFound, svc)
+	}
+	cliType := cli.Type()
+	mthd, found := cliType.MethodByName(method)
 	if !found {
-		return nil, errors.New("method not exist")
+		return nil, fmt.Errorf(constant.ErrMethodNotFound, method)
 	}
 
 	inp := mthd.Type.In(1)
@@ -66,15 +75,17 @@ func (u *usecase) GetRequestMethod(svc, method string, noEmpty bool) (map[string
 func (u *usecase) KiCall(host, svc, method string, req map[string]interface{}) (map[string]interface{}, error) {
 	var errKitex error
 	myClient.ClientKitex.RegisterAllClient(host)
-	cli2 := reflect.ValueOf(myClient.ClientKitex).FieldByName(svc)
+	cli := reflect.ValueOf(myClient.ClientKitex).FieldByName(svc)
+	if !cli.IsValid() {
+		return map[string]interface{}{}, fmt.Errorf(constant.ErrServiceNotFound, svc)
+	}
+	cliType := cli.Type()
 	// cli2, _ := kitexClient.NewClient("test", client.WithHostPorts(host))
-	mthd2 := cli2.MethodByName(method)
-
-	cli := cli2.Type()
+	mthd2 := cli.MethodByName(method)
 	// cli := reflect.TypeOf((*kitexClient.Client)(nil)).Elem()
-	mthd, found := cli.MethodByName(method)
+	mthd, found := cliType.MethodByName(method)
 	if !found {
-		return nil, errors.New("method not exist")
+		return nil, fmt.Errorf(constant.ErrMethodNotFound, method)
 	}
 
 	inp := mthd.Type.In(1)
