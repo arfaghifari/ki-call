@@ -18,7 +18,8 @@
 
 ##  Curl Example
 
-`curl --location 'localhost:9700/ls-svc'`
+### get services
+```curl --location 'localhost:9700/ls-svc'```
 
 example response
 ```json
@@ -36,7 +37,8 @@ example response
 }
 ```
 
-`curl --location 'localhost:9700/ls-func?service=YourPackage'`
+### get methods
+```curl --location 'localhost:9700/ls-func?service=YourPackage'```
 
 example response
 ```json
@@ -54,7 +56,8 @@ example response
 }
 ```
 
-`curl --location 'localhost:9700/requests?method=CreateYourModel&no_empty=false&service=YourPackage`
+### get requests
+```curl --location 'localhost:9700/requests?method=CreateYourModel&no_empty=false&service=YourPackage```
 
 example response
 ```json
@@ -76,22 +79,24 @@ example response
 }
 ```
 
-
-`curl --location 'localhost:9700/ki-call' \
+### Ki-Call
+```
+curl --location 'localhost:9700/ki-call' \
 --header 'Content-Type: application/json' \
 --data '{
     "host" : "127.0.0.1:8888",
     "method": "CreateYourModel",
     "request": {
-        "param1": "",
-        "param2": "",
-        "param3": 0,
-        "param4": []
+        "param1": "asd",
+        "param2": 5,
+        "param3": [],
+        "param 4": 100000
     },
     "service": "YourPackage"
-}'`
+}'
+```
 
-example 
+example respone
 ```json
 {
     "header": {
