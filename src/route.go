@@ -6,6 +6,7 @@ import (
 
 	myClient "github.com/arfaghifari/ki-call/src/client"
 	kcHandlers "github.com/arfaghifari/ki-call/src/handlers/http/kicall"
+	"github.com/arfaghifari/ki-call/src/middleware"
 	server "github.com/arfaghifari/ki-call/src/server"
 	kcUsecase "github.com/arfaghifari/ki-call/src/usecase/kicall"
 	"github.com/gorilla/mux"
@@ -24,6 +25,8 @@ func Main() {
 
 	router.HandleFunc("/ki-call", kicallHandlers.KiCall).Methods(http.MethodPost)
 
+	routerMw := middleware.MiddlewarePanic(router)
+
 	myClient.ClientKitex.RegisterAllClient("")
 
 	serverConfig := server.Config{
@@ -31,5 +34,5 @@ func Main() {
 		ReadTimeout:  5 * time.Second,
 		Port:         9700,
 	}
-	server.Serve(serverConfig, router)
+	server.Serve(serverConfig, &routerMw)
 }

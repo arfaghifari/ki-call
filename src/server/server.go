@@ -9,8 +9,6 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-
-	"github.com/gorilla/mux"
 )
 
 type Config struct {
@@ -19,9 +17,9 @@ type Config struct {
 	Port         int
 }
 
-func Serve(cfg Config, router *mux.Router) {
+func Serve(cfg Config, router *http.Handler) {
 	srv := &http.Server{
-		Handler:      router,
+		Handler:      *router,
 		Addr:         fmt.Sprint(":", cfg.Port),
 		WriteTimeout: cfg.WriteTimeout,
 		ReadTimeout:  cfg.ReadTimeout,
