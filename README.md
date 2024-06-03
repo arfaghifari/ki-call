@@ -1,5 +1,10 @@
 # ki-call
 
+## Prerequisite
+Go 1.8 or above <br>
+Python3 <br>
+Make <br>
+
 ## How to start service
 1. Add proto file in `/proto` directory 
 2. Generate pb golang file with command . <br> ```make gen-kitex obj={your package}``` <br> For example if your package's name is `example` . So the command is <br> `make gen-kitex obj=example`
