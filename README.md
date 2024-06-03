@@ -6,12 +6,13 @@ Python3 <br>
 Make <br>
 
 ## How to start service
-1. Add proto file in `/proto` directory 
-2. Generate pb golang file with command . <br> ```make gen-kitex obj={your package}``` <br> For example if your package's name is `example` . So the command is <br> `make gen-kitex obj=example`
+1. Install golang library `go mod tidy` command
+2. Add proto file in `/proto` directory 
+3. Generate pb golang file with command . <br> ```make gen-kitex obj={your package}``` <br> For example if your package's name is `example` . So the command is <br> `make gen-kitex obj=example`
 
-3. Generate client with command <br> `make gen-client`
-4. Build the service <br> `make build`
-5. Service will start on localhost at port 9700
+4. Generate client with command <br> `make gen-client`
+5. Build the service <br> `make build`
+6. Service will start on localhost at port 9700
 
 ## List of endpoints
 |endpoint|method|functionality|
