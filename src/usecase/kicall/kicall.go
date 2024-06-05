@@ -16,6 +16,7 @@ type Usecase interface {
 	GetListService() ([]string, error)
 	GetListMethod(svc string) ([]string, error)
 	GetRequestMethod(svc, method string, noEmpty bool) (map[string]interface{}, error)
+	GetResponseMethod(svc, method string, noEmpty bool) (map[string]interface{}, error)
 	KiCall(host, svc, method string, req map[string]interface{}) (map[string]interface{}, error)
 }
 
@@ -51,7 +52,6 @@ func (u *usecase) GetListMethod(svc string) ([]string, error) {
 }
 
 func (u *usecase) GetRequestMethod(svc, method string, noEmpty bool) (map[string]interface{}, error) {
-	// cli := reflect.TypeOf((*kitexClient.Client)(nil)).Elem()
 	service := reflect.ValueOf(myClient.ClientKitex).FieldByName(svc)
 	if !service.IsValid() {
 		return map[string]interface{}{}, fmt.Errorf(constant.ErrServiceNotFound, svc)
@@ -63,6 +63,23 @@ func (u *usecase) GetRequestMethod(svc, method string, noEmpty bool) (map[string
 	}
 
 	inp := mthd.Type.In(1)
+	req := reflect.New(inp.Elem()).Elem().Interface()
+
+	return converter.TransformStructToMapJson(req, noEmpty)
+}
+
+func (u *usecase) GetResponseMethod(svc, method string, noEmpty bool) (map[string]interface{}, error) {
+	service := reflect.ValueOf(myClient.ClientKitex).FieldByName(svc)
+	if !service.IsValid() {
+		return map[string]interface{}{}, fmt.Errorf(constant.ErrServiceNotFound, svc)
+	}
+	serviceType := service.Type()
+	mthd, found := serviceType.MethodByName(method)
+	if !found {
+		return nil, fmt.Errorf(constant.ErrMethodNotFound, method)
+	}
+
+	inp := mthd.Type.Out(0)
 	req := reflect.New(inp.Elem()).Elem().Interface()
 
 	return converter.TransformStructToMapJson(req, noEmpty)

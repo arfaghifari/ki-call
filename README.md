@@ -19,7 +19,8 @@ Make <br>
 |---|---|---|
 |`/ls-svc`|**GET**| Get all availabe services
 |`/ls-func`|**GET**| Get all available methods on a service 
-|`/ls-requests`|**GET**| Get format request from a method in a service
+|`/requests`|**GET**| Get format request from a method in a service
+|`/responses`|**GET**| Get format response from a method in a service
 |`/ki-call`|**POST**| Call kitex function
 
 ##  Curl Example
@@ -84,6 +85,25 @@ example response
     }
 }
 ```
+### get responses
+```curl --location 'localhost:9700/responses?method=CreateYourModel&no_empty=true&service=YourPackage```
+
+example response
+```json
+{
+    "header": {
+        "error_code": "",
+        "status_code": 200
+    },
+    "data": {
+        "response": {
+            "resfield1": 0,
+            "resfeild2": "",
+            "resfield3": []
+        },
+    }
+}
+```
 
 ### Ki-Call
 ```
@@ -95,7 +115,7 @@ curl --location 'localhost:9700/ki-call' \
     "request": {
         "param1": "asd",
         "param2": 5,
-        "param3": [],
+        "param3": [""],
         "param 4": 100000
     },
     "service": "YourPackage"
@@ -111,9 +131,9 @@ example respone
     },
     "data": {
         "response": {
-            "resfield1": 0,
-            "resfeild2": "",
-            "resfield3": []
+            "resfield1": 17,
+            "resfeild2": "arfaghif",
+            "resfield3": ["a","r","f","a"]
         },
     }
 }

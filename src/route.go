@@ -22,6 +22,7 @@ func Main() {
 	router.HandleFunc("/ls-svc", kicallHandlers.GetListService).Methods(http.MethodGet)
 	router.HandleFunc("/ls-func", kicallHandlers.GetListMethod).Methods(http.MethodGet)
 	router.HandleFunc("/requests", kicallHandlers.GetRequestMethod).Methods(http.MethodGet)
+	router.HandleFunc("/responses", kicallHandlers.GetResponseMethod).Methods(http.MethodGet)
 
 	router.HandleFunc("/ki-call", kicallHandlers.KiCall).Methods(http.MethodPost)
 

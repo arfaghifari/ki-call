@@ -145,6 +145,44 @@ func (h *Handlers) GetRequestMethod(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (h *Handlers) GetResponseMethod(w http.ResponseWriter, r *http.Request) {
+	var (
+		statusCode = http.StatusBadRequest
+		resp       MessageResponse
+	)
+	defer func() {
+		w.Header().Set("Content-Type", "application/json")
+		resp.StatusCode = statusCode
+		responseWriter, err := json.Marshal(resp)
+		if err != nil {
+			log.Fatal("Failed build response")
+		}
+		w.Write(responseWriter)
+		if statusCode != http.StatusOK {
+			w.WriteHeader(statusCode)
+		}
+	}()
+
+	serviceName := r.URL.Query().Get("service")
+	methodName := r.URL.Query().Get("method")
+	noEmptyStr := r.URL.Query().Get("no_empty")
+	noEmpty, _ := strconv.ParseBool(noEmptyStr)
+
+	res, err := h.usecase.GetResponseMethod(serviceName, methodName, noEmpty)
+
+	if err != nil {
+		statusCode = http.StatusInternalServerError
+		resp.Header.Error = err.Error()
+		return
+	}
+	statusCode = http.StatusOK
+	resp.Data = map[string]interface{}{
+		"service":  serviceName,
+		"method":   methodName,
+		"response": res,
+	}
+}
+
 func (h *Handlers) KiCall(w http.ResponseWriter, r *http.Request) {
 	var (
 		statusCode = http.StatusBadRequest
