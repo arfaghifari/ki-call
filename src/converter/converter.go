@@ -1,147 +1,174 @@
 package converter
 
 import (
-	"log"
+	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 )
 
-func TransformStructToMapJson(val reflect.Value, noEmpty bool) (map[string]interface{}, error) {
-	res := map[string]interface{}{}
-	tpe := val.Type()
-	for i := 0; i < tpe.NumField(); i++ {
-		f := tpe.Field(i)
-		v, ok := f.Tag.Lookup("json")
-		if !ok {
-			continue
-		}
-		if val.FieldByName(f.Name).Kind() == reflect.Slice {
-			arr, _ := TransformSliceToMapJson(val.FieldByName(f.Name), noEmpty)
-			res[strings.Split(v, ",")[0]] = arr
+var myMapExample = map[string]interface{}{}
 
-		} else if val.FieldByName(f.Name).Kind() == reflect.Struct {
-			arr, _ := TransformStructToMapJson(val.FieldByName(f.Name), noEmpty)
-			res[strings.Split(v, ",")[0]] = arr
-
-		} else if val.FieldByName(f.Name).Kind() == reflect.Pointer {
-			// val.FieldByName(f.Name)
-			// reflect.New(val.FieldByName(f.Name).Elem()).Elem()
-			newEl := val.FieldByName(f.Name)
-			if newEl.IsNil() {
-				newEl = reflect.New(val.FieldByName(f.Name).Type().Elem())
-			}
-			arr, _ := TransformStructToMapJson(newEl.Elem(), noEmpty)
-			res[strings.Split(v, ",")[0]] = arr
-
-		} else {
-			res[strings.Split(v, ",")[0]] = val.FieldByName(f.Name).Interface()
-		}
+// Transform Json Map to Struct
+func TransformMapJsonToStruct(myMapInterface interface{}, valueType reflect.Type) (interface{}, error) {
+	var err error
+	var temp interface{}
+	var fieldValue, value reflect.Value
+	if reflect.TypeOf(myMapInterface) != reflect.TypeOf(myMapExample) {
+		return nil, fmt.Errorf("value error: not a valid json format. want: %v, got %v", reflect.TypeOf(myMapExample), reflect.TypeOf(myMapInterface))
 	}
-	return res, nil
-}
-
-func TransformSliceToMapJson(val reflect.Value, noEmpty bool) ([]interface{}, error) {
-	res := []interface{}{}
-	if val.Len() == 0 {
-		if noEmpty {
-			if val.Type().Elem().Kind() == reflect.Pointer {
-				val = reflect.MakeSlice(reflect.SliceOf(val.Type().Elem().Elem()), 1, 1)
-			} else {
-				val = reflect.MakeSlice(reflect.SliceOf(val.Type().Elem()), 1, 1)
-			}
-		} else {
-			return []interface{}{}, nil
-		}
+	myMapReflect := reflect.ValueOf(myMapInterface)
+	myMap := map[string]interface{}{}
+	for _, key := range myMapReflect.MapKeys() {
+		mapKey := key.String()
+		myMap[mapKey] = myMapReflect.MapIndex(key).Interface()
 	}
-	// v := val.Index(0)
-	for i := 0; i < val.Len(); i++ {
-		if val.Index(i).Kind() == reflect.Struct {
-			it, _ := TransformStructToMapJson(val.Index(i), noEmpty)
-			res = append(res, it)
-
-		} else if val.Index(i).Kind() == reflect.Slice {
-			it, _ := TransformSliceToMapJson(val.Index(i), noEmpty)
-			res = append(res, it)
-		} else if val.Index(i).Kind() == reflect.Pointer {
-			log.Println(val.Index(i), val.Type().Elem())
-			reflect.New(val.Type().Elem().Elem()).Elem()
-			it, _ := TransformStructToMapJson(val.Index(i).Elem(), noEmpty)
-			log.Println(it)
-			res = append(res, it)
-
-		} else {
-			res = append(res, val.Index(i).Interface())
-		}
+	if valueType.Kind() != reflect.Struct && valueType.Kind() != reflect.Pointer {
+		return nil, errors.New("value error: not a struct")
 	}
-	return res, nil
-}
-
-func TransformMapJsonToStruct(myMap map[string]interface{}, val reflect.Value) (reflect.Value, error) {
-	tpe := val.Type()
-	res := reflect.New(tpe).Elem()
-	for i := 0; i < tpe.NumField(); i++ {
-		f := tpe.Field(i)
+	if valueType.Kind() == reflect.Pointer {
+		temp, err = TransformMapJsonToStruct(myMap, valueType.Elem())
+		tempAddr := reflect.New(valueType.Elem())
+		tempAddr.Elem().Set(reflect.ValueOf(temp))
+		return tempAddr.Interface(), err
+	}
+	value = reflect.New(valueType).Elem()
+	// should be struct
+	for i := 0; i < valueType.NumField(); i++ {
+		f := valueType.Field(i)
 		v, ok := f.Tag.Lookup("json")
 		if !ok {
 			continue
 		}
 		jsonName := strings.Split(v, ",")[0]
-		vl, ok := myMap[jsonName]
-		if !ok || vl == nil {
+		val, ok := myMap[jsonName]
+		if !ok || val == nil {
 			continue
 		}
-		if reflect.ValueOf(vl).Kind() == reflect.Slice {
-			intf := []interface{}{}
-			for j := 0; j < reflect.ValueOf(vl).Len(); j++ {
-				intf = append(intf, reflect.ValueOf(vl).Index(j).Interface())
-			}
-			rs, _ := TransformSliceToStruct(intf, res.FieldByName(f.Name).Type().Elem(), reflect.ValueOf(vl).Len())
-			res.FieldByName(f.Name).Set(rs.Convert(f.Type))
-		} else if reflect.ValueOf(vl).Kind() == reflect.Map {
-			myNextMap := map[string]interface{}{}
-			for _, e := range reflect.ValueOf(vl).MapKeys() {
-				va := reflect.ValueOf(vl).MapIndex(e)
-				key := e.String()
-				myNextMap[key] = va.Interface()
-			}
-
-			newEl := reflect.New(val.FieldByName(f.Name).Type().Elem())
-
-			rs, _ := TransformMapJsonToStruct(myNextMap, newEl.Elem())
-			res.FieldByName(f.Name).Set(rs.Addr().Convert(f.Type))
-		} else {
-			res.FieldByName(f.Name).Set(reflect.ValueOf(vl).Convert(f.Type))
+		fieldValue, err = TransformInterfaceToFieldValue(val, f.Type)
+		if err != nil {
+			return nil, err
 		}
+		value.FieldByName(f.Name).Set(fieldValue)
 	}
-	return res, nil
-
+	return value.Interface(), nil
 }
 
-func TransformSliceToStruct(arr []interface{}, tpe reflect.Type, length int) (reflect.Value, error) {
-	res := reflect.Value{}
-	if tpe.Kind() == reflect.Pointer {
-		res = reflect.MakeSlice(reflect.SliceOf(tpe.Elem()), length, length)
-	} else {
-		res = reflect.MakeSlice(reflect.SliceOf(tpe), length, length)
+func TransformInterfaceToFieldValue(val interface{}, valueType reflect.Type) (reflect.Value, error) {
+	var err error
+	var temp reflect.Value
+	var temp2 interface{}
+	var nilValue = reflect.ValueOf(nil)
+	value := reflect.ValueOf(val)
+	if value.Interface() == nil {
+		return nilValue, nil
+	}
+	if valueType.Kind() == reflect.Pointer {
+		temp, err = TransformInterfaceToFieldValue(val, valueType.Elem())
+		tempAddr := reflect.New(valueType.Elem())
+		tempAddr.Elem().Set(temp)
+		return tempAddr, err
+	}
+	if valueType.Kind() == reflect.Struct {
+		temp2, err = TransformMapJsonToStruct(val, valueType)
+		return reflect.ValueOf(temp2), err
+	}
+	if valueType.Kind() == reflect.Slice {
+		if value.Type().Kind() != reflect.Slice {
+			return nilValue, errors.New("value error: not a slice")
+		}
+		res := reflect.MakeSlice(valueType, value.Len(), value.Len())
+		var it reflect.Value
+		for i := 0; i < value.Len(); i++ {
+			it, err = TransformInterfaceToFieldValue(value.Index(i).Interface(), valueType.Elem())
+			if err != nil {
+				break
+			}
+			res.Index(i).Set(it)
+		}
+		return res, nil
+	}
+	if err != nil {
+		return nilValue, err
 	}
 
-	for i, it := range arr {
-		vl := res.Index(i)
-		if vl.Kind() == reflect.Map {
-			myNextMap := map[string]interface{}{}
-			for _, e := range vl.MapKeys() {
-				va := vl.MapIndex(e)
-				key := e.String()
-				myNextMap[key] = va.Interface()
-			}
+	return reflect.ValueOf(val).Convert(valueType), nil
+}
 
-			newEl := reflect.New(vl.Type().Elem())
-			rs, _ := TransformMapJsonToStruct(myNextMap, newEl.Elem())
-			vl.Set(rs.Addr().Convert(vl.Type()))
-		} else {
-			vl.Set(reflect.ValueOf(it).Convert(tpe))
+// Transform Struct To Json Map
+func TransformStructToMapJson(val interface{}, noEmpty bool) (map[string]interface{}, error) {
+	var err error
+	res := map[string]interface{}{}
+	value := reflect.ValueOf(val)
+	valueType := value.Type()
+	if valueType.Kind() != reflect.Struct && valueType.Kind() != reflect.Pointer {
+		return nil, errors.New("value error: not a struct")
+	}
+	if valueType.Kind() == reflect.Pointer {
+		res, err = TransformStructToMapJson(reflect.Indirect(value).Interface(), noEmpty)
+		return res, err
+	}
+	// should be struct
+	for i := 0; i < valueType.NumField(); i++ {
+		f := valueType.Field(i)
+		v, ok := f.Tag.Lookup("json")
+		if !ok {
+			continue
+		}
+		res[strings.Split(v, ",")[0]], err = TransformInterfaceToMapJson(value.FieldByName(f.Name).Interface(), noEmpty)
+		if err != nil {
+			break
 		}
 	}
-	return res, nil
+	return res, err
+}
 
+func TransformInterfaceToMapJson(val interface{}, noEmpty bool) (interface{}, error) {
+	var err error
+	value := reflect.ValueOf(val)
+	valueType := value.Type()
+
+	if valueType.Kind() == reflect.Pointer {
+		if value.IsNil() {
+			if noEmpty {
+				newVal := reflect.New(valueType.Elem())
+				return TransformInterfaceToMapJson(newVal.Elem().Interface(), noEmpty)
+			}
+			return nil, nil
+		}
+		return TransformInterfaceToMapJson(reflect.Indirect(value).Interface(), noEmpty)
+	}
+
+	if valueType.Kind() == reflect.Struct {
+		return TransformStructToMapJson(val, noEmpty)
+	}
+
+	if valueType.Kind() == reflect.Slice {
+		if value.IsNil() && !noEmpty {
+			return nil, nil
+		}
+		if value.IsNil() || value.Len() == 0 {
+			if noEmpty {
+				var it interface{}
+				newVal := reflect.New(valueType.Elem())
+				it, err = TransformInterfaceToMapJson(newVal.Elem().Interface(), noEmpty)
+				return []interface{}{it}, err
+			}
+		}
+		res := []interface{}{}
+		var it interface{}
+		for i := 0; i < value.Len(); i++ {
+			it, err = TransformInterfaceToMapJson(value.Index(i).Interface(), noEmpty)
+			if err != nil {
+				break
+			}
+			res = append(res, it)
+		}
+		return res, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return val, nil
 }
